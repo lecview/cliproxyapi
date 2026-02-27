@@ -23,7 +23,6 @@ RUN mkdir /CLIProxyAPI
 COPY --from=builder ./app/CLIProxyAPI /CLIProxyAPI/CLIProxyAPI
 
 COPY config.example.yaml /CLIProxyAPI/config.example.yaml
-COPY config.example.yaml /CLIProxyAPI/config.yaml
 
 WORKDIR /CLIProxyAPI
 
@@ -33,4 +32,13 @@ ENV TZ=Asia/Shanghai
 
 RUN cp /usr/share/zoneinfo/${TZ} /etc/localtime && echo "${TZ}" > /etc/timezone
 
-CMD ["./CLIProxyAPI"]
+# 启动脚本：如果持久化目录没有 config.yaml，就从默认模板复制一份过去
+# 然后用软链接指向持久化目录的配置文件
+CMD sh -c '\
+  if [ ! -f /root/.cli-proxy-api/config.yaml ]; then \
+    cp /CLIProxyAPI/config.example.yaml /root/.cli-proxy-api/config.yaml; \
+    echo "已从模板创建默认配置文件"; \
+  fi && \
+  ln -sf /root/.cli-proxy-api/config.yaml /CLIProxyAPI/config.yaml && \
+  echo "配置文件已链接到持久化目录" && \
+  ./CLIProxyAPI'
